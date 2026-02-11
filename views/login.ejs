@@ -1,0 +1,22 @@
+<%- include('partials/header', { user: null }) %>
+    <div class="login-container">
+        <h2>Identify Yourself</h2>
+        <% if (error) { %>
+            <div class="error">
+                <%= error %>
+            </div>
+            <% } %>
+                <form action="/auth/login" method="POST">
+                    <div class="input-group">
+                        <label for="username">User Identity:</label>
+                        <input type="text" id="username" name="username" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="password">Passcode:</label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
+                    <button type="submit">Establish Connection</button>
+                </form>
+                <a href="/auth/register" class="link-register">New Agent? Register.</a>
+    </div>
+    <%- include('partials/footer') %>

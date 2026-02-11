@@ -1,0 +1,97 @@
+<%- include('partials/header') %>
+    <div class="level-container">
+        <h2>Level 1: Pixel Forest</h2>
+        <p>The forest whispers a command. What should you do?</p>
+
+        <div id="forest-container">
+            <% for(let i=0; i<25; i++) { %>
+                <div class="forest-tile">
+                    <img src="/images/forest/forest_<%= i %>.svg" alt="Forest Signal" class="forest-img">
+                </div>
+                <% } %>
+        </div>
+
+        <div class="interaction-area">
+            <input type="text" id="answer-input" placeholder="Enter the command..." autocomplete="off">
+            <button id="submit-btn" onclick="submitLevel1()">Submit</button>
+        </div>
+        <div id="feedback" class="feedback-msg"></div>
+    </div>
+
+    <script>
+        // Listen for Enter key
+        document.getElementById('answer-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') submitLevel1();
+        });
+
+        // Device orientation handler
+        window.addEventListener('deviceorientation', (event) => {
+            const gamma = event.gamma; // Left/Right tilt in degrees
+
+            // If device is rotated to landscape (gamma approx +/- 90)
+            // We reduce the "noise" or increase visibility.
+            // My SVGs have opacity logic but let's apply CSS filter.
+
+            const tilt = Math.abs(gamma || 0);
+            const images = document.querySelectorAll('.forest-img');
+
+            if (tilt > 45) {
+                // Landscape mode -> clear vision
+                images.forEach(img => {
+                    img.style.filter = 'contrast(1.5) brightness(1.2) hue-rotate(90deg)'; // Reveal the green text more
+                    img.style.opacity = '1';
+                });
+            } else {
+                // Portrait mode -> obscured
+                images.forEach(img => {
+                    img.style.filter = 'contrast(0.8) brightness(0.5) blur(1px)';
+                    img.style.opacity = '0.7';
+                });
+            }
+        });
+
+        async function submitLevel1() {
+            const answer = document.getElementById('answer-input').value;
+            const feedback = document.getElementById('feedback');
+
+            const res = await fetch('/game/level1/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ answer })
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+                feedback.innerText = data.message;
+                feedback.style.color = 'var(--nexus-primary)';
+                setTimeout(() => {
+                    window.location.href = data.redirect;
+                }, 2000);
+            } else {
+                feedback.innerText = data.message;
+                feedback.style.color = 'red';
+            }
+        }
+    </script>
+
+    <style>
+        .forest-tile {
+            width: 60px;
+            height: 60px;
+            overflow: hidden;
+            border: 1px solid #1a2f1a;
+        }
+
+        .forest-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: all 0.5s ease;
+            /* Default state: obscured */
+            filter: contrast(0.8) brightness(0.5) blur(1px);
+            opacity: 0.7;
+        }
+    </style>
+    <script src="/js/lockdown.js"></script>
+    <%- include('partials/footer') %>

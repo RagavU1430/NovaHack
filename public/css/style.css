@@ -1,0 +1,224 @@
+:root {
+    --nexus-bg: #0d1117;
+    --nexus-primary: #00ff41;
+    /* classic hacker green */
+    --nexus-secondary: #00ffff;
+    /* cyan */
+    --nexus-accent: #ff00ff;
+    /* magenta */
+    --nexus-text: #c9d1d9;
+    --nexus-font: 'Courier New', Courier, monospace;
+}
+
+body {
+    background-color: var(--nexus-bg);
+    color: var(--nexus-text);
+    font-family: var(--nexus-font);
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+header {
+    background: rgba(0, 0, 0, 0.8);
+    border-bottom: 1px solid var(--nexus-primary);
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+h1,
+h2,
+h3 {
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin: 0;
+    color: var(--nexus-primary);
+    text-shadow: 0 0 5px var(--nexus-primary);
+}
+
+.container {
+    padding: 2rem;
+    max-width: 800px;
+    margin: 0 auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Glitch Effect Utility */
+@keyframes glitch {
+    0% {
+        transform: translate(0);
+    }
+
+    20% {
+        transform: translate(-2px, 2px);
+    }
+
+    40% {
+        transform: translate(-2px, -2px);
+    }
+
+    60% {
+        transform: translate(2px, 2px);
+    }
+
+    80% {
+        transform: translate(2px, -2px);
+    }
+
+    100% {
+        transform: translate(0);
+    }
+}
+
+.glitch:hover {
+    animation: glitch 0.3s infinite;
+}
+
+/* Specific to Level 1 */
+#forest-container {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 5px;
+    margin: 20px 0;
+}
+
+.forest-tile {
+    width: 60px;
+    height: 60px;
+    background-color: #1a2f1a;
+    border: 1px solid #2e5c2e;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    /* Interaction hint */
+}
+
+/* Hidden Text Logic */
+.hidden-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(var(--rotation, 0deg));
+    font-size: 10px;
+    /* Small enough to fit */
+    color: rgba(0, 255, 65, 0.1);
+    /* Very faint */
+    pointer-events: none;
+    transition: opacity 0.5s, color 0.5s;
+    white-space: nowrap;
+}
+
+/* When device is rotated (mocked by media query or JS class) */
+.rotated .hidden-text {
+    color: rgba(0, 255, 65, 1);
+    text-shadow: 0 0 5px var(--nexus-primary);
+}
+
+/* Forms */
+input[type="text"],
+input[type="password"] {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--nexus-primary);
+    color: var(--nexus-primary);
+    padding: 10px;
+    width: 100%;
+    font-family: var(--nexus-font);
+    margin-bottom: 1rem;
+}
+
+button {
+    background: transparent;
+    border: 1px solid var(--nexus-primary);
+    color: var(--nexus-primary);
+    padding: 10px 20px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+}
+
+button:hover {
+    background: var(--nexus-primary);
+    color: black;
+    box-shadow: 0 0 10px var(--nexus-primary);
+}
+
+/* Admin Dashboard */
+.admin-panel {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 20px;
+}
+
+.stat-box {
+    border: 1px solid var(--nexus-secondary);
+    padding: 15px;
+    text-align: center;
+}
+
+.log-terminal {
+    background: black;
+    border: 1px solid #333;
+    height: 300px;
+    overflow-y: scroll;
+    padding: 10px;
+    font-size: 0.8rem;
+    color: #aaa;
+}
+
+.log-entry {
+    margin-bottom: 5px;
+    border-bottom: 1px dashed #333;
+}
+
+/* Security Overlay */
+#security-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(255, 0, 0, 0.95);
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.violation-box {
+    background: black;
+    border: 2px solid red;
+    padding: 3rem;
+    text-align: center;
+    color: red;
+    box-shadow: 0 0 50px red;
+    animation: flash 0.5s infinite alternate;
+}
+
+.violation-box h1 {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.violation-box .reason {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: white;
+}
+
+@keyframes flash {
+    0% {
+        box-shadow: 0 0 20px red;
+    }
+
+    100% {
+        box-shadow: 0 0 50px white;
+    }
+}

@@ -1,0 +1,85 @@
+<%- include('partials/header') %>
+    <div class="level-container">
+        <h2>Core System Access</h2>
+        <div class="puzzle-box">
+            <div class="scrambled-text glitch" data-text="E P A C E S"
+                style="font-size: 3rem; letter-spacing: 1rem; text-align: center; margin: 2rem 0;">
+                E P A C E S
+            </div>
+            <p>Enter the final command to restore the system.</p>
+        </div>
+
+        <div class="interaction-area">
+            <input type="text" id="core-input" placeholder="ACCESS CODE..." autocomplete="off">
+            <button id="submit-core" onclick="submitLevel2()">EXECUTE</button>
+        </div>
+        <div id="core-feedback" class="feedback-msg"></div>
+    </div>
+
+    <script>
+        document.getElementById('core-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') submitLevel2();
+        });
+
+        async function submitLevel2() {
+            const answer = document.getElementById('core-input').value;
+            const feedback = document.getElementById('core-feedback');
+
+            try {
+                const res = await fetch('/game/level2/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ answer })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    feedback.innerHTML = data.message.replace(/\//g, '<br>');
+                    feedback.style.color = 'var(--nexus-primary)';
+                    setTimeout(() => {
+                        window.location.href = data.redirect;
+                    }, 3000);
+                } else {
+                    feedback.innerText = data.message;
+                    feedback.style.color = 'red';
+                    // Shake effect
+                    document.getElementById('core-input').classList.add('shake');
+                    setTimeout(() => document.getElementById('core-input').classList.remove('shake'), 500);
+                }
+            } catch (err) {
+                console.error(err);
+                feedback.innerText = 'CONNECTION ERROR';
+            }
+        }
+    </script>
+    <style>
+        @keyframes shake {
+            0% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-5px);
+            }
+
+            50% {
+                transform: translateX(5px);
+            }
+
+            75% {
+                transform: translateX(-5px);
+            }
+
+            100% {
+                transform: translateX(0);
+            }
+        }
+
+        .shake {
+            animation: shake 0.5s;
+            border-color: red !important;
+        }
+    </style>
+    <script src="/js/lockdown.js"></script>
+    <%- include('partials/footer') %>

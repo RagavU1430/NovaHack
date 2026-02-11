@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS | SYSTEM RESTORATION</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://kit.fontawesome.com/your-code.js" crossorigin="anonymous"></script> <!-- Optional for icons -->
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <span class="glitch">NEXUS</span> Protocol
+        </div>
+        <div class="user-status">
+            <% if (typeof user !== 'undefined' && user) { %>
+                <span class="user-id">ID: <%= user %></span>
+                <a href="/auth/logout" class="btn-logout">[ DISCONNECT ]</a>
+            <% } else { %>
+                <span class="status-offline">Offline</span>
+            <% } %>
+        </div>
+    </header>
+    <main class="container">

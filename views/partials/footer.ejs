@@ -1,0 +1,35 @@
+</main>
+<footer>
+    <div class="footer-status">
+        SYSTEM STATUS: <span id="system-status">CRITICAL</span> | PING: <span id="ping-val">--</span>ms
+    </div>
+    <div class="copyright">
+        &copy; 2026 NEXUS CORP
+    </div>
+</footer>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    // Simple global socket logic (optional but good for status updates)
+    const socket = io();
+    socket.on('connect', () => {
+        document.getElementById('system-status').innerText = 'CONNECTED';
+        document.getElementById('system-status').style.color = 'var(--nexus-primary)';
+    });
+    socket.on('disconnect', () => {
+        document.getElementById('system-status').innerText = 'OFFLINE';
+        document.getElementById('system-status').style.color = 'red';
+    });
+    socket.on('game_start', (data) => {
+        // Maybe a global alert or reload if on waiting page
+        if (window.location.pathname === '/waiting') {
+            window.location.href = '/game/level1';
+        }
+    });
+    socket.on('game_stop', (data) => {
+        alert('GAME OVER: ' + data.message);
+        window.location.href = '/waiting';
+    });
+</script>
+</body>
+
+</html>

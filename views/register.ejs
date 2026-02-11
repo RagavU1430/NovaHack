@@ -1,0 +1,22 @@
+<%- include('partials/header', { user: null }) %>
+    <div class="register-container">
+        <h2>New Identity Enrollment</h2>
+        <% if (error) { %>
+            <div class="error">
+                <%= error %>
+            </div>
+            <% } %>
+                <form action="/auth/register" method="POST">
+                    <div class="input-group">
+                        <label for="username">Create Alias:</label>
+                        <input type="text" id="username" name="username" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="password">Set Passcode:</label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
+                    <button type="submit">Initialize Identity</button>
+                </form>
+                <a href="/auth/login" class="link-login">Already Enrolled? Login.</a>
+    </div>
+    <%- include('partials/footer') %>

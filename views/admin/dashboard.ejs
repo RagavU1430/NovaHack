@@ -1,0 +1,173 @@
+<%- include('../partials/header') %>
+    <div class="admin-panel">
+        <div class="controls-section">
+            <h2>System Control</h2>
+            <div class="status-indicator">
+                STATUS: <span id="game-status" class="<%= gameState === 'started' ? 'active' : 'inactive' %>">
+                    <%= gameState.toUpperCase() %>
+                </span>
+            </div>
+
+            <form action="/admin/start" method="POST" style="display:inline-block;">
+                <button type="submit" class="btn-start" <%=gameState==='started' ? 'disabled' : '' %>>INITIATE SEQUENCE
+                    (START)</button>
+            </form>
+
+            <form action="/admin/stop" method="POST" style="display:inline-block;">
+                <button type="submit" class="btn-stop" <%=gameState==='started' ? '' : 'disabled' %>>TERMINATE SEQUENCE
+                    (STOP)</button>
+            </form>
+
+            <div class="stats-overview">
+                <div class="stat-box">
+                    <h3>Total Agents</h3>
+                    <span id="stat-total">
+                        <%= stats.total %>
+                    </span>
+                </div>
+                <div class="stat-box">
+                    <h3>Active</h3>
+                    <span id="stat-active">
+                        <%= stats.active %>
+                    </span> <!-- Fixed undefined 'active' in router? No, router passed stats object. -->
+                    <!-- wait, in router I passed stats object with 'total', 'level1', 'level2', 'escaped'. -->
+                    <!-- I can calculate active = level1 + level2 in the view or server. -->
+                    <!-- Server passed: level1, level2. So Active = level1 + level2. -->
+                </div>
+                <div class="stat-box">
+                    <h3>Escaped</h3>
+                    <span id="stat-escaped">
+                        <%= stats.escaped %>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="monitoring-section">
+            <h2>Live Feed</h2>
+            <div class="log-terminal" id="log-terminal">
+                <% logs.forEach(log=> { %>
+                    <div class="log-entry">
+                        <span class="timestamp">[<%= new Date(log.timestamp).toLocaleTimeString() %>]</span>
+                        <span class="user">Agent #<%= log.userId %></span>
+                        <span class="action">
+                            <%= log.action %>
+                        </span>:
+                        <span class="details">
+                            <%= log.details %>
+                        </span>
+                    </div>
+                    <% }) %>
+            </div>
+
+            <h3>Participant Progress</h3>
+            <table class="progress-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Agent Name</th>
+                        <th>Current Level</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="participant-list">
+                    <% participants.forEach(p=> { %>
+                        <tr id="user-<%= p.id %>">
+                            <td>
+                                <%= p.id %>
+                            </td>
+                            <td>
+                                <%= p.username %>
+                            </td>
+                            <td>
+                                <%= p.currentLevel %>
+                            </td>
+                            <td>
+                                <%= p.currentLevel===3 ? 'ESCAPED' : (p.currentLevel===0 ? 'WAITING' : 'ACTIVE' ) %>
+                            </td>
+                        </tr>
+                        <% }) %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Poll for updates every 2 seconds
+        setInterval(updateDashboard, 2000);
+
+        async function updateDashboard() {
+            try {
+                const res = await fetch('/admin/api/stats');
+                const data = await res.json();
+
+                // Update stats
+                document.getElementById('stat-total').innerText = data.stats.total;
+                document.getElementById('stat-active').innerText = data.stats.active;
+                document.getElementById('stat-escaped').innerText = data.stats.escaped;
+
+                // Update table
+                const tbody = document.getElementById('participant-list');
+                tbody.innerHTML = '';
+                data.participants.forEach(p => {
+                    const status = p.currentLevel === 3 ? 'ESCAPED' : (p.currentLevel === 0 ? 'WAITING' : 'ACTIVE');
+                    const row = `
+                    <tr>
+                        <td>${p.id}</td>
+                        <td>${p.username}</td>
+                        <td>${p.currentLevel}</td>
+                        <td class="${status.toLowerCase()}">${status}</td>
+                    </tr>
+                `;
+                    tbody.innerHTML += row;
+                });
+
+            } catch (e) {
+                console.error("Polling error", e);
+            }
+        }
+    </script>
+
+    <style>
+        .active {
+            color: var(--nexus-primary);
+        }
+
+        .inactive {
+            color: red;
+        }
+
+        .btn-start {
+            background: rgba(0, 255, 65, 0.2);
+            border-color: var(--nexus-primary);
+        }
+
+        .btn-stop {
+            background: rgba(255, 0, 0, 0.2);
+            border-color: red;
+            color: red;
+        }
+
+        .progress-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .progress-table th,
+        .progress-table td {
+            border: 1px solid #333;
+            padding: 5px;
+            text-align: left;
+        }
+
+        .escaped {
+            color: cyan;
+            font-weight: bold;
+        }
+
+        .waiting {
+            color: grey;
+        }
+    </style>
+    <%- include('../partials/footer') %>

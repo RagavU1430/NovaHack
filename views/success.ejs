@@ -1,0 +1,40 @@
+<%- include('partials/header') %>
+    <div class="success-screen">
+        <div class="completion-box">
+            <h1 class="glitch" data-text="CORE REBOOT SUCCESSFUL">CORE REBOOT SUCCESSFUL</h1>
+            <p>NEXUS restored.</p>
+            <p>The world stabilizes around you.</p>
+            <p>The portal opens. You are no longer inside the game.</p>
+            <h3 class="success-msg">SERVER RESTORED — PLAYER FREED</h3>
+            <a href="/" class="btn-primary">Return to Lobby</a>
+        </div>
+    </div>
+    <style>
+        .success-screen {
+            text-align: center;
+            margin-top: 10vh;
+        }
+
+        .success-msg {
+            font-size: 2rem;
+            color: cyan;
+            text-shadow: 0 0 10px cyan;
+            margin-top: 2rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 0.5;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.5;
+            }
+        }
+    </style>
+    <%- include('partials/footer') %>
