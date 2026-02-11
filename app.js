@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 // const socketIo = require('socket.io'); // Socket.io removed for serverless compatibility
 const session = require('express-session');
+const pgSession = require('connect-pg-simple')(session);
 const path = require('path');
 const dotenv = require('dotenv');
 const bodyParser = require('body-parser');
@@ -19,11 +20,20 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(cookieParser());
+
+// Persistent Session Store
 app.use(session({
+    store: new pgSession({
+        pool: pool.pool,
+        tableName: 'session'
+    }),
     secret: 'nexus_secret_key_change_this',
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 24 * 60 * 60 * 1000 } // 24 hours
+    cookie: {
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        secure: process.env.NODE_ENV === 'production' // Secure in production (Vercel uses HTTPS)
+    }
 }));
 
 // View engine

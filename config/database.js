@@ -2,20 +2,22 @@ const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: false
-    }
-});
+const pool = new Pool(); // Use default env DATABASE_URL or other standard PG env vars if present. Or use connectionString below.
+
+if (process.env.DATABASE_URL) {
+    // Vercel / Production
+    pool.options.connectionString = process.env.DATABASE_URL;
+    pool.options.ssl = { rejectUnauthorized: false };
+}
 
 pool.on('error', (err, client) => {
     console.error('Unexpected error on idle client', err);
 });
 
 async function initDB() {
-    const client = await pool.connect();
+    let client;
     try {
+        client = await pool.connect();
         await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -45,6 +47,20 @@ async function initDB() {
       );
     `);
 
+        // Session table for connect-pg-simple
+        await client.query(`
+        CREATE TABLE IF NOT EXISTS "session" (
+            "sid" varchar NOT NULL COLLATE "default",
+            "sess" json NOT NULL,
+            "expire" timestamp(6) NOT NULL
+        )
+        WITH (OIDS=FALSE);
+        
+        ALTER TABLE "session" ADD CONSTRAINT "session_pkey" PRIMARY KEY ("sid") NOT DEFERRABLE INITIALLY IMMEDIATE;
+        
+        CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
+        `);
+
         // Seed Initial State
         const checkState = await client.query("SELECT * FROM game_state WHERE key = 'status'");
         if (checkState.rows.length === 0) {
@@ -60,9 +76,11 @@ async function initDB() {
 
         console.log('PostgreSQL Database Initialized.');
     } catch (err) {
-        console.error('Database Initialization Error:', err);
+        if (err.code !== '42P07') { // duplicate_table is fine (specifically for session table if already exists with diff structure)
+            console.error('Database Initialization Error:', err);
+        }
     } finally {
-        client.release();
+        if (client) client.release();
     }
 }
 
@@ -71,4 +89,5 @@ initDB();
 
 module.exports = {
     query: (text, params) => pool.query(text, params),
+    pool: pool // Export pool for connect-pg-simple
 };
