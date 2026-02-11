@@ -1,28 +1,25 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-const db = require('../models/user'); // Oh wait... I didn't create models/user.js, I should create it first or import from config.
-
-// Better to create a user model for cleaner separation.
-// For now, let's keep it simple: import db from config.
-const database = require('../config/database');
+const pool = require('../config/database');
 
 router.get('/login', (req, res) => {
     res.render('login', { error: null });
 });
 
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
     const { username, password } = req.body;
     try {
-        const user = database.prepare('SELECT * FROM users WHERE username = ?').get(username);
+        const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+        const user = result.rows[0];
+
         if (user) {
-            // Check password
-            const match = bcrypt.compareSync(password, user.password);
+            const match = await bcrypt.compare(password, user.password);
             if (match) {
                 req.session.userId = user.id;
                 req.session.username = user.username;
                 req.session.role = user.role;
-                req.session.currentLevel = user.currentLevel;
+                req.session.currentLevel = user.currentlevel; // Postgres might lowercase columns
 
                 if (user.role === 'admin') {
                     return res.redirect('/admin/dashboard');
@@ -42,29 +39,28 @@ router.get('/register', (req, res) => {
     res.render('register', { error: null });
 });
 
-router.post('/register', (req, res) => {
+router.post('/register', async (req, res) => {
     const { username, password } = req.body;
-    const bcrypt = require('bcryptjs');
-    const hash = bcrypt.hashSync(password, 10);
+    const hash = await bcrypt.hash(password, 10);
 
     try {
-        const stmt = database.prepare('INSERT INTO users (username, password, role) VALUES (?, ?, ?)');
-        const info = stmt.run(username, hash, 'participant');
+        const result = await pool.query('INSERT INTO users (username, password, role) VALUES ($1, $2, $3) RETURNING id', [username, hash, 'participant']);
 
-        req.session.userId = info.lastInsertRowid;
+        req.session.userId = result.rows[0].id; // RETURNING clause in PG
         req.session.username = username;
         req.session.role = 'participant';
-        req.session.currentLevel = 0; // Waiting for start
+        req.session.currentLevel = 0;
 
-        // Check game status
-        const status = database.prepare("SELECT value FROM game_state WHERE key = 'status'").get();
-        if (status && JSON.parse(status.value).state === 'started') {
+        const status = await pool.query("SELECT value FROM game_state WHERE key = 'status'");
+        const gameState = status.rows[0].value.state;
+
+        if (gameState === 'started') {
             res.redirect('/game/level1');
         } else {
             res.redirect('/waiting');
         }
     } catch (err) {
-        if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+        if (err.code === '23505') { // Postgres UNIQUE VIOLATION
             res.render('register', { error: 'Username already taken' });
         } else {
             console.error(err);

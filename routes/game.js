@@ -1,92 +1,98 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../config/database');
-const { ensureAuthenticated, ensureGameStarted } = require('../middleware/auth');
+const pool = require('../config/database');
+const { ensureAuthenticated } = require('../middleware/auth');
 
 // Level 1: Pixel Forest
-router.get('/level1', ensureAuthenticated, (req, res) => {
-    const status = db.prepare("SELECT value FROM game_state WHERE key = 'status'").get();
-    const gameState = JSON.parse(status.value).state;
+router.get('/level1', ensureAuthenticated, async (req, res) => {
+    try {
+        const gameRes = await pool.query("SELECT value FROM game_state WHERE key = 'status'");
+        const gameState = gameRes.rows[0].value.state;
 
-    if (gameState !== 'started' && req.session.role !== 'admin') {
-        return res.render('waiting');
-    }
+        if (gameState !== 'started' && req.session.role !== 'admin') {
+            return res.render('waiting');
+        }
 
-    // Check user progress
-    const user = db.prepare('SELECT currentLevel, progress FROM users WHERE id = ?').get(req.session.userId);
+        const userRes = await pool.query('SELECT currentLevel, progress FROM users WHERE id = $1', [req.session.userId]);
+        const user = userRes.rows[0];
 
-    if (user.currentLevel >= 2) {
-        return res.redirect('/game/level2');
-    }
+        if (user.currentlevel >= 2) {
+            return res.redirect('/game/level2');
+        }
 
-    // Update level if needed (start the user)
-    if (user.currentLevel === 0) {
-        db.prepare('UPDATE users SET currentLevel = 1 WHERE id = ?').run(req.session.userId);
-    }
+        if (user.currentlevel === 0) {
+            await pool.query('UPDATE users SET currentLevel = 1 WHERE id = $1', [req.session.userId]);
+        }
 
-    res.render('level1', { user: req.session.username });
+        res.render('level1', { user: req.session.username });
+    } catch (e) { console.error(e); res.status(500).send('DB Error'); }
 });
 
-router.post('/level1/submit', ensureAuthenticated, (req, res) => {
+router.post('/level1/submit', ensureAuthenticated, async (req, res) => {
     const { answer } = req.body;
-    if (answer && answer.toLowerCase().trim() === 'rotate') {
-        // Correct!
-        db.prepare('UPDATE users SET currentLevel = 2, progress = json_set(progress, "$.level1CompletedAt", datetime("now")) WHERE id = ?').run(req.session.userId);
+    try {
+        if (answer && answer.toLowerCase().trim() === 'rotate') {
+            // Postgres JSON update slightly different: jsonb_set
+            await pool.query(`
+                UPDATE users 
+                SET currentLevel = 2, 
+                    progress = jsonb_set(progress, '{level1CompletedAt}', to_jsonb(now())) 
+                WHERE id = $1`, [req.session.userId]);
 
-        // Log it
-        db.prepare('INSERT INTO logs (userId, action, details) VALUES (?, ?, ?)').run(req.session.userId, 'level1_complete', 'Solved "rotate" puzzle');
+            await pool.query('INSERT INTO logs (userId, action, details) VALUES ($1, $2, $3)', [req.session.userId, 'level1_complete', 'Solved "rotate" puzzle']);
 
-        return res.json({ success: true, message: 'Signal received... NEXUS connection partially restored.', redirect: '/game/level2' });
-    }
+            return res.json({ success: true, message: 'Signal received... NEXUS connection partially restored.', redirect: '/game/level2' });
+        }
 
-    // Log failure
-    db.prepare('INSERT INTO logs (userId, action, details) VALUES (?, ?, ?)').run(req.session.userId, 'level1_attempt', `Tried: ${answer}`);
-
-    res.json({ success: false, message: 'Invalid command. Looking for input from the environment...' });
+        await pool.query('INSERT INTO logs (userId, action, details) VALUES ($1, $2, $3)', [req.session.userId, 'level1_attempt', `Tried: ${answer}`]);
+        res.json({ success: false, message: 'Invalid command. Looking for input from the environment...' });
+    } catch (e) { console.error(e); res.status(500).json({ success: false, message: 'Server Error' }); }
 });
 
 // Level 2: Core AI
-router.get('/level2', ensureAuthenticated, (req, res) => {
-    const user = db.prepare('SELECT currentLevel FROM users WHERE id = ?').get(req.session.userId);
+router.get('/level2', ensureAuthenticated, async (req, res) => {
+    try {
+        const userRes = await pool.query('SELECT currentLevel FROM users WHERE id = $1', [req.session.userId]);
+        const user = userRes.rows[0];
 
-    if (user.currentLevel < 2) {
-        return res.redirect('/game/level1');
-    }
-    if (user.currentLevel >= 3) {
-        return res.redirect('/game/success');
-    }
+        if (user.currentlevel < 2) {
+            return res.redirect('/game/level1');
+        }
+        if (user.currentlevel >= 3) {
+            return res.redirect('/game/success');
+        }
 
-    res.render('level2', { user: req.session.username });
+        res.render('level2', { user: req.session.username });
+    } catch (e) { console.error(e); res.status(500).send('DB Error'); }
 });
 
-router.post('/level2/submit', ensureAuthenticated, (req, res) => {
+router.post('/level2/submit', ensureAuthenticated, async (req, res) => {
     const { answer } = req.body;
-    if (answer && answer.toLowerCase().trim() === 'escape') {
-        // Correct!
-        db.prepare('UPDATE users SET currentLevel = 3, progress = json_set(progress, "$.level2CompletedAt", datetime("now")) WHERE id = ?').run(req.session.userId);
+    try {
+        if (answer && answer.toLowerCase().trim() === 'escape') {
+            await pool.query(`
+                UPDATE users 
+                SET currentLevel = 3, 
+                    progress = jsonb_set(progress, '{level2CompletedAt}', to_jsonb(now())) 
+                WHERE id = $1`, [req.session.userId]);
 
-        // Log success
-        db.prepare('INSERT INTO logs (userId, action, details) VALUES (?, ?, ?)').run(req.session.userId, 'level2_complete', 'Solved "escape" puzzle');
+            await pool.query('INSERT INTO logs (userId, action, details) VALUES ($1, $2, $3)', [req.session.userId, 'level2_complete', 'Solved "escape" puzzle']);
+            return res.json({ success: true, message: 'CORE REBOOT SUCCESSFUL / NEXUS restored.', redirect: '/game/success' });
+        }
 
-        return res.json({
-            success: true,
-            message: 'CORE REBOOT SUCCESSFUL / NEXUS restored. / The portal opens.',
-            redirect: '/game/success'
-        });
-    }
-
-    // Log failure
-    db.prepare('INSERT INTO logs (userId, action, details) VALUES (?, ?, ?)').run(req.session.userId, 'level2_attempt', `Tried: ${answer}`);
-
-    res.json({ success: false, message: 'Access Denied. Sequence incorrect.' });
+        await pool.query('INSERT INTO logs (userId, action, details) VALUES ($1, $2, $3)', [req.session.userId, 'level2_attempt', `Tried: ${answer}`]);
+        res.json({ success: false, message: 'Access Denied. Sequence incorrect.' });
+    } catch (e) { console.error(e); res.status(500).json({ success: false, message: 'Server Error' }); }
 });
 
-router.get('/success', ensureAuthenticated, (req, res) => {
-    const user = db.prepare('SELECT currentLevel FROM users WHERE id = ?').get(req.session.userId);
-    if (user.currentLevel < 3) {
-        return res.redirect('/game/level2');
-    }
-    res.render('success');
+router.get('/success', ensureAuthenticated, async (req, res) => {
+    try {
+        const userRes = await pool.query('SELECT currentLevel FROM users WHERE id = $1', [req.session.userId]);
+        if (userRes.rows[0].currentlevel < 3) {
+            return res.redirect('/game/level2');
+        }
+        res.render('success');
+    } catch (e) { console.error(e); res.status(500).send('DB Error'); }
 });
 
 module.exports = router;
