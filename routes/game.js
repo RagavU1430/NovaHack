@@ -3,6 +3,18 @@ const router = express.Router();
 const pool = require('../config/database');
 const { ensureAuthenticated } = require('../middleware/auth');
 
+// Game Status Check (Polling Endpoint)
+router.get('/status', ensureAuthenticated, async (req, res) => {
+    try {
+        const gameRes = await pool.query("SELECT value FROM game_state WHERE key = 'status'");
+        const gameState = gameRes.rows[0].value.state;
+        res.json({ state: gameState });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'DB Error' });
+    }
+});
+
 // Level 1: Pixel Forest
 router.get('/level1', ensureAuthenticated, async (req, res) => {
     try {
@@ -32,7 +44,6 @@ router.post('/level1/submit', ensureAuthenticated, async (req, res) => {
     const { answer } = req.body;
     try {
         if (answer && answer.toLowerCase().trim() === 'rotate') {
-            // Postgres JSON update slightly different: jsonb_set
             await pool.query(`
                 UPDATE users 
                 SET currentLevel = 2, 

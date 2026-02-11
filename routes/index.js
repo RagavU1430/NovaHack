@@ -16,4 +16,9 @@ router.get('/waiting', (req, res) => {
     res.render('waiting');
 });
 
+// Public health check for footer status polling
+router.get('/status', (req, res) => {
+    res.json({ status: 'online', timestamp: Date.now() });
+});
+
 module.exports = router;

@@ -32,7 +32,7 @@ router.get('/', async (req, res) => {
 router.post('/start', async (req, res) => {
     try {
         await pool.query("UPDATE game_state SET value = $1 WHERE key = 'status'", [JSON.stringify({ state: 'started', startTime: Date.now() })]);
-        req.io.emit('game_start', { message: 'NEXUS system initializing...' });
+        // Socket.io removed
         res.redirect('/admin');
     } catch (e) {
         console.error(e);
@@ -43,7 +43,7 @@ router.post('/start', async (req, res) => {
 router.post('/stop', async (req, res) => {
     try {
         await pool.query("UPDATE game_state SET value = $1 WHERE key = 'status'", [JSON.stringify({ state: 'stopped', endTime: Date.now() })]);
-        req.io.emit('game_stop', { message: 'System shutdown initiated.' });
+        // Socket.io removed
         res.redirect('/admin');
     } catch (e) {
         console.error(e);

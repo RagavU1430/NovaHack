@@ -1,8 +1,22 @@
-<%- include('partials/header') %>
+<%- include('partials/header', { user }) %>
     <div class="waiting-screen">
         <h2>System Offline</h2>
         <div class="loader">Loading...</div>
         <p>Waiting for administrator to initiate restoration protocol...</p>
         <div id="status-message"></div>
     </div>
+    <script>
+        // Poll for game start every 3 seconds
+        setInterval(async () => {
+            try {
+                const res = await fetch('/game/status');
+                const data = await res.json();
+                if (data.state === 'started') {
+                    window.location.reload();
+                }
+            } catch (e) {
+                console.error("Connection lost...", e);
+            }
+        }, 3000);
+    </script>
     <%- include('partials/footer') %>

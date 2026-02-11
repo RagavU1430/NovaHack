@@ -1,7 +1,6 @@
 /* NEXUS SECURITY PROTOCOL - LOCKDOWN.JS */
 
 let violationCount = 0;
-const socket = io();
 
 // Force Fullscreen
 function requestFullScreen() {
@@ -24,17 +23,17 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
-window.addEventListener('blur', () => {
-    // Often triggered with visibilitychange, but good as backup
-    // handleViolation("Focus Lost"); // Can be too sensitive (e.g. clicking iframe), use with caution.
-    // Sticking to visibilitychange for "Tab Switch" specifically.
-});
-
 function handleViolation(reason) {
     violationCount++;
 
-    // Notify Server
-    socket.emit('security_violation', { reason: reason, count: violationCount });
+    // Notify Server via HTTP POST instead of WebSocket
+    fetch('/api/violation', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ reason: reason, count: violationCount })
+    }).catch(err => console.error("Violation reporting failed:", err));
 
     // Show Overlay
     const overlay = document.createElement('div');
@@ -48,7 +47,9 @@ function handleViolation(reason) {
             <button onclick="resumeSession()">RESTORE CONNECTION</button>
         </div>
     `;
-    document.body.appendChild(overlay);
+    if (!document.getElementById('security-overlay')) {
+        document.body.appendChild(overlay);
+    }
 }
 
 function resumeSession() {
@@ -57,14 +58,9 @@ function resumeSession() {
     requestFullScreen();
 }
 
-// Initial Fullscreen Request on any interaction if not active
+// Initial Fullscreen Request
 document.addEventListener('click', () => {
     if (!document.fullscreenElement) {
         requestFullScreen();
     }
 }, { once: false });
-
-// Socket listener for admin forced layout?
-socket.on('force_refresh', () => {
-    window.location.reload();
-});
