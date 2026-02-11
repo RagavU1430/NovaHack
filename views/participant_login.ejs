@@ -1,0 +1,20 @@
+<%- include('partials/header', { user: null }) %>
+    <div class="login-container">
+        <h2>PARTICIPANT ACCESS</h2>
+        <form action="/auth/login/participant" method="POST">
+            <p>IDENTIFY YOUR UNIT (TEAM NAME)</p>
+            <div class="input-group">
+                <input type="text" id="username" name="username" placeholder="TEAM NAME" required autofocus
+                    autocomplete="off">
+            </div>
+            <% if (error) { %>
+                <div class="error">
+                    <%= error %>
+                </div>
+                <% } %>
+                    <button type="submit">CONNECT TO NEXUS</button>
+        </form>
+        <a href="/" class="link-back">
+            < Back to Entry</a>
+    </div>
+    <%- include('partials/footer') %>

@@ -3,69 +3,70 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const pool = require('../config/database');
 
-router.get('/login', (req, res) => {
-    res.render('login', { error: null });
+// HOST LOGIN (Admin)
+router.get('/login/host', (req, res) => {
+    res.render('host_login', { error: null });
 });
 
-router.post('/login', async (req, res) => {
-    const { username, password } = req.body;
-    try {
-        const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
-        const user = result.rows[0];
+router.post('/login/host', async (req, res) => {
+    const { password } = req.body;
 
-        if (user) {
-            const match = await bcrypt.compare(password, user.password);
-            if (match) {
-                req.session.userId = user.id;
-                req.session.username = user.username;
-                req.session.role = user.role;
-                req.session.currentLevel = user.currentlevel; // Postgres might lowercase columns
+    // Check hardcoded admin password
+    if (password === 'admin1234') {
+        // Set session as admin
+        req.session.userId = 1; // Fallback ID if admin lookup fails or not needed
+        req.session.username = 'ADMIN';
+        req.session.role = 'admin';
 
-                if (user.role === 'admin') {
-                    return res.redirect('/admin/dashboard');
-                } else {
-                    return res.redirect('/game/level1');
-                }
-            }
-        }
-        res.render('login', { error: 'Invalid credentials' });
-    } catch (err) {
-        console.error(err);
-        res.render('login', { error: 'System error' });
+        res.redirect('/admin');
+    } else {
+        res.render('host_login', { error: 'ACCESS DENIED: Incorrect Passcode' });
     }
 });
 
-router.get('/register', (req, res) => {
-    res.render('register', { error: null });
+// PARTICIPANT LOGIN (Team Name)
+router.get('/login/participant', (req, res) => {
+    res.render('participant_login', { error: null });
 });
 
-router.post('/register', async (req, res) => {
-    const { username, password } = req.body;
-    const hash = await bcrypt.hash(password, 10);
+router.post('/login/participant', async (req, res) => {
+    const { username } = req.body;
 
     try {
-        const result = await pool.query('INSERT INTO users (username, password, role) VALUES ($1, $2, $3) RETURNING id', [username, hash, 'participant']);
+        // Check if user exists
+        const check = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+        let user = check.rows[0];
 
-        req.session.userId = result.rows[0].id; // RETURNING clause in PG
-        req.session.username = username;
-        req.session.role = 'participant';
-        req.session.currentLevel = 0;
+        if (user) {
+            // If user exists, check if they are participant
+            if (user.role === 'admin') {
+                return res.render('participant_login', { error: 'Name reserved for ADMIN.' });
+            }
+            // Log them back in seamlessly
+            req.session.userId = user.id;
+            req.session.username = user.username;
+            req.session.role = user.role;
+            req.session.currentLevel = user.currentlevel;
 
-        const status = await pool.query("SELECT value FROM game_state WHERE key = 'status'");
-        const gameState = status.rows[0].value.state;
-
-        if (gameState === 'started') {
-            res.redirect('/game/level1');
+            // Redirect to game logic
+            return res.redirect('/game/level1');
         } else {
-            res.redirect('/waiting');
+            // Create new participant
+            const result = await pool.query(
+                "INSERT INTO users (username, password, role, currentLevel, progress) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+                [username, 'participant_pass', 'participant', 0, '{}']
+            );
+
+            req.session.userId = result.rows[0].id;
+            req.session.username = username;
+            req.session.role = 'participant';
+            req.session.currentLevel = 0;
+
+            return res.redirect('/game/level1');
         }
     } catch (err) {
-        if (err.code === '23505') { // Postgres UNIQUE VIOLATION
-            res.render('register', { error: 'Username already taken' });
-        } else {
-            console.error(err);
-            res.render('register', { error: 'System error' });
-        }
+        console.error(err);
+        res.render('participant_login', { error: 'System Error. Try again.' });
     }
 });
 

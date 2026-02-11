@@ -1,0 +1,19 @@
+<%- include('partials/header', { user: null }) %>
+    <div class="login-container">
+        <h2>HOST ACCESS</h2>
+        <form action="/auth/login/host" method="POST">
+            <div class="input-group">
+                <label for="password">ADMIN PASSWORD:</label>
+                <input type="password" id="password" name="password" required autofocus>
+            </div>
+            <% if (error) { %>
+                <div class="error">
+                    <%= error %>
+                </div>
+                <% } %>
+                    <button type="submit">VERIFY CREDENTIALS</button>
+        </form>
+        <a href="/" class="link-back">
+            < Back to Entry</a>
+    </div>
+    <%- include('partials/footer') %>
